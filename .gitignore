@@ -221,3 +221,12 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# vocelle data
+audio/*
+!audio/.gitkeep
+analysis/*
+!analysis/.gitkeep
+renders/*
+!renders/.gitkeep
+*.blend1
