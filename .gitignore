@@ -230,3 +230,7 @@ analysis/*
 renders/*
 !renders/.gitkeep
 *.blend1
+
+# active working projects (local only)
+projects/*
+!projects/.gitkeep
