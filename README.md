@@ -1,4 +1,6 @@
-# vocelle
+# Vocelle
+
+[![CI](https://github.com/Joe-Heffer/vocelle/actions/workflows/ci.yml/badge.svg)](https://github.com/Joe-Heffer/vocelle/actions/workflows/ci.yml)
 
 A toolkit for **expressive, music-reactive 3D music videos** rendered in Blender (EEVEE).
 
