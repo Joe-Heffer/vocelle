@@ -1,0 +1,35 @@
+name: Pipeline smoke test
+
+# Runs the analysis side of the pipeline end to end on the synthetic song
+# (known tempo, chords and sections). Blender rendering is not exercised here:
+# it needs Blender 5.2 and a GPU/Vulkan driver.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: smoke-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - run: uv sync --frozen
+      - name: Generate synthetic song
+        run: uv run python -m vocelle.synth "$RUNNER_TEMP/demo.wav"
+      - name: Analyse without stem separation
+        run: uv run vocelle analyze "$RUNNER_TEMP/demo.wav" --no-separate --out "$RUNNER_TEMP/analysis.json"
+      - name: Check feature file exists and is non-empty
+        run: test -s "$RUNNER_TEMP/analysis.json"
