@@ -28,6 +28,7 @@ uv run vocelle analyze audio/demo.wav --no-separate --sections 4
 uv run vocelle render analysis/demo.json --still 9 16 22 --res 960x540     # preview stills
 uv run vocelle render analysis/demo.json --start 14 --duration 10 --res 960x540 --quality preview
 uv run vocelle render analysis/demo.json                                     # full 1080p video
+uv run vocelle render analysis/demo.json --workers 3                         # ~2.5x faster: 3 Blender processes + ffmpeg stitch
 ```
 
 For a real track, put it in `audio/` and run `vocelle analyze audio/track.wav`. Demucs runs

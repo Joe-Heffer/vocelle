@@ -30,6 +30,11 @@ def parse() -> argparse.Namespace:
     ap.add_argument("--start", type=float, default=0.0)
     ap.add_argument("--duration", type=float)
     ap.add_argument("--quality", default="final")
+    ap.add_argument("--frame-start", type=int, help="absolute first Blender frame (overrides --start)")
+    ap.add_argument("--frame-end", type=int, help="absolute last Blender frame, inclusive (overrides --duration)")
+    ap.add_argument("--no-audio", action="store_true", help="video only (parallel chunk workers)")
+    ap.add_argument("--samples", type=int, help="override EEVEE render samples")
+    ap.add_argument("--threads", type=int, help="CPU threads for this process (0 = auto)")
     ap.add_argument("--still", type=float, nargs="+")
     ap.add_argument("--save-blend", action="store_true")
     return ap.parse_args(argv)
@@ -52,7 +57,7 @@ def main() -> None:
     # Start from an empty scene.
     bpy.ops.wm.read_factory_settings(use_empty=True)
     scene = bpy.context.scene
-    render.setup_render(scene, fps, a.res, a.quality)
+    render.setup_render(scene, fps, a.res, a.quality, samples=a.samples, threads=a.threads)
 
     ctl = drive.build_control(data)
     hist, chroma = drive.build_history(data)
@@ -63,6 +68,10 @@ def main() -> None:
     last = drive.FRAME_OFFSET + data["n_frames"] - 1
     if a.duration is not None:
         last = min(last, first + int(round(a.duration * fps)) - 1)
+    if a.frame_start is not None:
+        first = a.frame_start
+    if a.frame_end is not None:
+        last = min(a.frame_end, drive.FRAME_OFFSET + data["n_frames"] - 1)
     scene.frame_start, scene.frame_end = first, last
 
     out = Path(a.out)
@@ -79,8 +88,10 @@ def main() -> None:
             print(f"[vocelle] wrote {scene.render.filepath}")
         return
 
-    audio = Path(a.audio) if a.audio else find_audio(features_path.resolve(), data["track"])
-    if audio:
+    audio = None if a.no_audio else (Path(a.audio) if a.audio else find_audio(features_path.resolve(), data["track"]))
+    if a.no_audio:
+        pass
+    elif audio:
         render.add_audio(scene, audio, drive.FRAME_OFFSET)
     else:
         print("[vocelle] WARNING: audio not found, rendering silent video (pass --audio)")

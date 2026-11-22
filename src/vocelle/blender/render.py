@@ -22,7 +22,8 @@ def setup_compositor(scene, bloom_strength: float = 0.5, threshold: float = 1.0)
     scene.compositing_node_group = g
 
 
-def setup_render(scene, fps: float, res: str, quality: str) -> None:
+def setup_render(scene, fps: float, res: str, quality: str, samples: int | None = None,
+                 threads: int | None = None) -> None:
     w, h = (int(v) for v in res.lower().split("x"))
     r = scene.render
     r.engine = "BLENDER_EEVEE"
@@ -32,7 +33,11 @@ def setup_render(scene, fps: float, res: str, quality: str) -> None:
     r.use_motion_blur = True
     r.motion_blur_shutter = 0.5
     ee = scene.eevee
-    ee.taa_render_samples = 16 if quality == "preview" else 64
+    ee.taa_render_samples = samples or (16 if quality == "preview" else 64)
+    r.use_persistent_data = True  # keep evaluated geometry between frames of an animation
+    if threads:
+        r.threads_mode = "FIXED"
+        r.threads = threads
     ee.use_raytracing = quality == "final"
     ee.use_shadows = True
     scene.view_settings.view_transform = "AgX"
