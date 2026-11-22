@@ -27,3 +27,11 @@ which shells out to `blender -b --factory-startup --python src/vocelle/blender/r
 
 Hardware here: AMD RX 580 (Polaris). EEVEE works headless via Vulkan; Cycles GPU (HIP) does not
 support Polaris, so Cycles would be CPU-only.
+
+## Render performance
+Per-frame cost is dominated by single-threaded Geometry Nodes/depsgraph work, not shading, so one Blender
+process leaves the GPU and most cores idle. `vocelle render --workers N` splits the frame range into N
+chunks (`cli.split_frames`), renders each in its own Blender process (video-only, `--frame-start/--frame-end/
+--no-audio/--threads`), then stitches with ffmpeg concat and muxes audio. Finished chunks are kept in
+`renders/.<out>-chunks/` (`.done` markers) so an interrupted run resumes. Each worker loads the scene, so VRAM
+bounds N. Measured on the RX 580 box: 6 s preview @960x540, 166 s (1 worker) vs 67 s (3 workers).
