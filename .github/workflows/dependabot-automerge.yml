@@ -1,0 +1,54 @@
+name: Dependabot auto-merge
+
+# Squash-merges Dependabot PRs for patch and minor updates once CI has passed.
+# Major bumps are left for manual review. Runs on workflow_run (not
+# pull_request) because Dependabot-triggered pull_request runs get a read-only token.
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  automerge:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'pull_request' &&
+      github.event.workflow_run.actor.login == 'dependabot[bot]'
+    steps:
+      - name: Merge patch/minor updates
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          PR: ${{ github.event.workflow_run.pull_requests[0].number }}
+        run: |
+          [ -n "$PR" ] || { echo "No PR attached to this run"; exit 0; }
+          title=$(gh pr view "$PR" --json title --jq .title)
+          echo "Title: $title"
+          # Dependabot titles end in "from <old> to <new>"
+          re='from ([^ ]+) to ([^ ]+)$'
+          if ! [[ "$title" =~ $re ]]; then
+            echo "Cannot parse versions (grouped update?); leaving for manual review"
+            exit 0
+          fi
+          old=${BASH_REMATCH[1]#v}
+          new=${BASH_REMATCH[2]#v}
+          if [ "${old%%.*}" != "${new%%.*}" ]; then
+            echo "Major bump $old -> $new; leaving for manual review"
+            exit 0
+          fi
+          # 0.x versions: a minor bump can break, so require the same minor too.
+          if [ "${old%%.*}" = "0" ]; then
+            o=${old#0.}; n=${new#0.}
+            if [ "${o%%.*}" != "${n%%.*}" ]; then
+              echo "0.x minor bump $old -> $new; leaving for manual review"
+              exit 0
+            fi
+          fi
+          gh pr merge "$PR" --squash --delete-branch
